@@ -44,11 +44,11 @@ html:not(.js) header.top{position:static}
 .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 button:focus-visible,.tab:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 section.view{display:flex;flex-direction:column;gap:14px;padding-top:14px}
-.nav{display:flex;align-items:center;gap:8px}
+.nav{display:flex;align-items:center;gap:8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr,128px));z-index:4;background:var(--bg);padding-block:8px;margin-block:-8px;border-bottom:1px solid var(--line)}
 .nav .lbl{flex:1;font-weight:600;min-width:0}
 .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 14px var(--body);padding:7px 12px;border-radius:10px;cursor:pointer}
 .btn.sq{width:38px;padding:7px 0}
-.day{display:flex;flex-direction:column;gap:6px;scroll-margin-top:140px}
+.day{display:flex;flex-direction:column;gap:6px;scroll-margin-top:calc(var(--hdr,128px) + 64px)}
 .dayhead{display:flex;align-items:baseline;gap:8px;padding-top:6px}
 .dayhead .dn{font-family:var(--display);font-size:14px;font-weight:500}
 .dayhead .dd{color:var(--mute);font-size:13px}
@@ -318,6 +318,8 @@ const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); retu
 const monday = d => addDays(d, -((d.getDay()+6)%7));
 const todayIso = () => iso(new Date());
 const human = s => { const d = pd(s); return d.getDate()+' '+MON[d.getMonth()]; };
+const MONS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const shortD = d => d.getDate() + ' ' + MONS[d.getMonth()];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const BYDAY = {};
@@ -381,6 +383,11 @@ function paintSync() { const el = document.getElementById('sync'); if (el) el.te
 
 /* ---------- отрисовка ---------- */
 const view = document.getElementById('view');
+/* строка с неделей прилипает под шапкой: высоту шапки меряем, она зависит от ширины экрана */
+const hdrEl = document.querySelector('header.top');
+const setHdr = () => document.documentElement.style.setProperty('--hdr', hdrEl.offsetHeight + 'px');
+setHdr(); addEventListener('resize', setHdr);
+if (window.ResizeObserver) new ResizeObserver(setHdr).observe(hdrEl);
 let tab = 'week', weekStart = monday(new Date()), monthRef = new Date(new Date().getFullYear(), new Date().getMonth(), 1), openNotes = {};
 const hashTab = (location.hash || '').replace('#', '');
 if (['week','month','tasks','subj'].includes(hashTab)) tab = hashTab;
@@ -417,7 +424,7 @@ function taskHtml(t, compact) {
 }
 function renderWeek() {
   const tIso = todayIso(), end = addDays(weekStart, 6);
-  let h = '<div class="nav"><button class="btn sq" data-wk="-1" aria-label="Предыдущая неделя">‹</button><div class="lbl">' + human(iso(weekStart)) + ' – ' + human(iso(end)) + '</div><button class="btn" data-wk="0">Сегодня</button><button class="btn sq" data-wk="1" aria-label="Следующая неделя">›</button></div>';
+  let h = '<div class="nav"><button class="btn sq" data-wk="-1" aria-label="Предыдущая неделя">‹</button><div class="lbl">' + shortD(weekStart) + ' – ' + shortD(end) + '</div><button class="btn" data-wk="0">Сегодня</button><button class="btn sq" data-wk="1" aria-label="Следующая неделя">›</button></div>';
   for (let i = 0; i < 7; i++) {
     const d = addDays(weekStart, i), k = iso(d), evs = (BYDAY[k] || []).filter(visible), ts = TASKBYDAY[k] || [];
     if (i === 6 && !evs.length && !ts.length) continue;
